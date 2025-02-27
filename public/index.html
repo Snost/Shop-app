@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Формування замовлення</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h2>ELEYS СПИСОК ТОВАРІВ</h2>
+    <button onclick="addProduct()">Додати товар</button>
+    <table>
+        <thead>
+            <tr>
+                <th>Вибрати</th>
+                <th>Код товару</th>
+                <th>Назва товару</th>
+                <th>Кількість</th>
+                <th>Ціна за одиницю</th>
+            </tr>
+        </thead>
+        <tbody id="product-list"></tbody>
+    </table>
+    
+    <button onclick="generateOrder()">Сформувати замовлення</button>
+    <button onclick="clearSelection()">Очистити вибір</button>
+    
+    <h3>Замовлення:</h3>
+    <textarea id="order-text" rows="10" cols="50" readonly></textarea>
+    
+    <script src="script.js"></script>
+</body>
+</html>
