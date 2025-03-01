@@ -8,7 +8,13 @@
 </head>
 <body>
     <h2>ELEYS СПИСОК ТОВАРІВ</h2>
-    <button onclick="addProduct()">Додати товар</button>
+
+    <h2>Додати товар</h2>
+    <input type="text" id="new-code" placeholder="Код товару">
+    <input type="text" id="new-name" placeholder="Назва товару">
+    <input type="number" id="new-price" placeholder="Ціна" min="0.01">
+    <button onclick="addNewProduct()">Додати товар</button>
+
     <table>
         <thead>
             <tr>
@@ -20,15 +26,14 @@
                 <th>Дії</th>
             </tr>
         </thead>
-        <tbody id="product-list"></tbody>
+        <tbody id="product"></tbody>
     </table>
-    
-    <button onclick="generateOrder()">Сформувати замовлення</button>
+
     <button onclick="clearSelection()">Очистити вибір</button>
-    
+
     <h3>Замовлення:</h3>
     <textarea id="order-text" rows="10" cols="50" readonly></textarea>
-    
+
     <script src="script.js"></script>
 </body>
 </html>

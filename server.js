@@ -6,7 +6,7 @@ require('dotenv').config();
 const app = express();
 const port = 3060;
 
-// Підключення до MySQL
+// 📌 Підключення до MySQL
 const db = mysql.createConnection(process.env.MYSQL_URL);
 
 db.connect(err => {
@@ -19,13 +19,6 @@ db.connect(err => {
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-
-// 📌 Каталог товарів
-const products = [
-  { code: '00000006770', name: 'Двигун YJ84-28 CW-63 мм.', price: 464.00 },
-  { code: '00000006781', name: 'Двигун YY 8030 D-5 ХХ СW', price: 1182.00 },
-  { code: '00000001575', name: 'Двигун Еко2, Елегант2 зібраний', price: 424.00 }
-];
 
 // 🟢 Створення таблиці products
 db.query(`
@@ -61,17 +54,6 @@ db.query(`
   else console.log('✅ Ініціалізація global_selection успішна');
 });
 
-// 🟢 Додавання товарів у базу, якщо їх ще немає
-products.forEach(product => {
-  db.query(
-    'INSERT IGNORE INTO products (code, name, price) VALUES (?, ?, ?)',
-    [product.code, product.name, product.price],
-    (err) => {
-      if (err) console.error('❌ Помилка додавання товару:', err);
-    }
-  );
-});
-
 // 🟢 Отримати список усіх товарів
 app.get('/products', (req, res) => {
   console.log('Запит до /products');
@@ -84,6 +66,66 @@ app.get('/products', (req, res) => {
     res.json(results);
   });
 });
+
+// 🟢 Додати товар у каталог (✅ повернуто!)
+app.post('/add-product', (req, res) => {
+  const { code, name, price } = req.body;
+  if (!code || !name || !price) {
+    return res.status(400).json({ error: 'Не всі дані заповнені' });
+  }
+
+  db.query(
+    'INSERT INTO products (code, name, price) VALUES (?, ?, ?)',
+    [code, name, price],
+    (err) => {
+      if (err) {
+        console.error('❌ Помилка додавання товару:', err);
+        return res.status(500).json({ error: 'Помилка сервера' });
+      }
+      console.log('✅ Товар додано:', name);
+      res.json({ message: '✅ Товар успішно додано' });
+    }
+  );
+});
+// 📝 Редагувати товар
+app.put('/edit-product', (req, res) => {
+  const { oldCode, newCode, name, price } = req.body;
+
+  if (!oldCode || !newCode || !name || !price) {
+      return res.status(400).json({ error: 'Не всі дані заповнені' });
+  }
+
+  db.query(
+      'UPDATE products SET code = ?, name = ?, price = ? WHERE code = ?',
+      [newCode, name, price, oldCode],
+      (err, result) => {
+          if (err) {
+              console.error('❌ Помилка редагування товару:', err);
+              return res.status(500).json({ error: 'Помилка сервера' });
+          }
+          if (result.affectedRows === 0) {
+              return res.status(404).json({ error: '❌ Товар не знайдено' });
+          }
+          res.json({ message: '✅ Товар оновлено' });
+      }
+  );
+});
+// 🗑 Видалити товар
+app.delete('/delete-product/:code', (req, res) => {
+  const { code } = req.params;
+
+  db.query('DELETE FROM products WHERE code = ?', [code], (err, result) => {
+      if (err) {
+          console.error('❌ Помилка видалення товару:', err);
+          return res.status(500).json({ error: 'Помилка сервера' });
+      }
+      if (result.affectedRows === 0) {
+          return res.status(404).json({ error: '❌ Товар не знайдено' });
+      }
+      res.json({ message: '✅ Товар видалено' });
+  });
+});
+
 
 // 🟢 Отримати вибір товарів
 app.get('/selected-products', (req, res) => {
@@ -104,6 +146,17 @@ app.post('/selected-products', (req, res) => {
       res.json({ message: '✅ Вибір оновлено' });
     }
   );
+});
+app.get('/products', (req, res) => {
+  console.log('🔵 Запит на отримання товарів');
+  db.query('SELECT * FROM products', (err, results) => {
+      if (err) {
+          console.error('❌ Помилка отримання товарів:', err);
+          return res.status(500).json({ error: 'Помилка сервера' });
+      }
+      console.log('✅ Отримано товари:', results);
+      res.json(results);
+  });
 });
 
 // Запуск сервера
