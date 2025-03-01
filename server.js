@@ -54,6 +54,8 @@ db.query(`
   else console.log('✅ Ініціалізація global_selection успішна');
 });
 
+
+
 // 🟢 Отримати список усіх товарів
 app.get('/products', (req, res) => {
   console.log('Запит до /products');

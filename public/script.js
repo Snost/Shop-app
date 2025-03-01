@@ -59,6 +59,7 @@ function renderProductTable() {
         list.innerHTML = '<tr><td colspan="7">❌ Товари відсутні</td></tr>';
         return;
     }
+    allProducts.sort((a, b) => a.name.localeCompare(b.name));
 
     allProducts.forEach((product, index) => {
         let price = parseFloat(product.price);
@@ -210,6 +211,7 @@ function clearSelection() {
     .catch(error => console.error('Помилка очищення вибору:', error));
 }
 
+  
 // 📦 Завантажити дані при старті
 window.onload = function () {
     loadProducts();
