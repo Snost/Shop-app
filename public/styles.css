@@ -5,10 +5,9 @@ body {
     padding: 20px;
 }
 
-h1 {
+h2 {
     color: #333;
-    text-align: center;
-    font-size: 36px;
+    font-size: 28px;
     margin-bottom: 20px;
 }
 
@@ -35,18 +34,33 @@ button {
     background-color: #007BFF;
     color: white;
     border: none;
-    padding: 15px 30px;
-    font-size: 18px;
-    border-radius: 10px;
+    padding: 10px 20px;
+    font-size: 16px;
+    border-radius: 5px;
     cursor: pointer;
-    margin: 10px;
+    margin: 5px;
 }
 
 button:hover {
-    background-color: #3ba2b4;
+    background-color: #0056b3;
 }
 
 textarea {
     width: 80%;
     margin-top: 20px;
+}
+
+td button {
+    background-color: #28a745;
+    padding: 5px 10px;
+    font-size: 14px;
+    margin: 2px;
+}
+
+td button:nth-child(2) {
+    background-color: #dc3545;
+}
+
+td button:hover {
+    opacity: 0.8;
 }

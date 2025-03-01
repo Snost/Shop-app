@@ -26,7 +26,6 @@ let products = JSON.parse(localStorage.getItem('products')) || [
     { code: '00000010539', name: 'Фільтр ФАЖ 536 х 342 х 9 (5-шар)', price: 426.00 },
     { code: '01-00012360', name: 'Лампа світлодіодна LED 220V 1,5W 6000K (кругла)', price: 250.00 }
 ];
-
 function saveProducts() {
     localStorage.setItem('products', JSON.stringify(products));
 }
@@ -42,6 +41,10 @@ function loadProducts() {
             <td>${product.name}</td>
             <td><input type='number' class='product-qty' value='1' min='1'></td>
             <td>${product.price.toFixed(2)}</td>
+            <td>
+                <button onclick='editProduct(${index})'>Редагувати</button>
+                <button onclick='deleteProduct(${index})'>Видалити</button>
+            </td>
         `;
         list.appendChild(row);
     });
@@ -57,6 +60,29 @@ function addProduct() {
         loadProducts();
     } else {
         alert('Некоректні дані!');
+    }
+}
+
+function editProduct(index) {
+    let product = products[index];
+    let code = prompt('Введіть новий код товару:', product.code);
+    let name = prompt('Введіть нову назву товару:', product.name);
+    let price = parseFloat(prompt('Введіть нову ціну товару:', product.price));
+    
+    if (code && name && !isNaN(price)) {
+        products[index] = { code, name, price };
+        saveProducts();
+        loadProducts();
+    } else {
+        alert('Некоректні дані!');
+    }
+}
+
+function deleteProduct(index) {
+    if (confirm('Ви впевнені, що хочете видалити цей товар?')) {
+        products.splice(index, 1);
+        saveProducts();
+        loadProducts();
     }
 }
 

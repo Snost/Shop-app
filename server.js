@@ -1,17 +1,16 @@
 const express = require('express');
 const mysql = require('mysql2');
 const path = require('path');
-require('dotenv').config(); // Завантаження змінних із .env
 
 const app = express();
-const port = process.env.PORT || 3000; // Бере порт з .env або ставить 3000
+const port = 3000;
 
 // Підключення до MySQL
 const db = mysql.createConnection({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME
+  host: 'localhost',
+  user: 'root',
+  password: '12022022Naz',
+  database: 'shop'
 });
 
 db.connect(err => {
