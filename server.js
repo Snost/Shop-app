@@ -7,11 +7,12 @@ const port = 3000;
 
 // Підключення до MySQL
 const db = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: '12022022Naz',
-  database: 'shop'
+  host: process.env.MYSQLHOST,  // використовуємо змінну середовища
+  user: process.env.MYSQLUSER,  // використовуємо ім'я користувача з .env
+  password: process.env.MYSQLPASSWORD,  // використовуємо пароль з .env
+  database: process.env.MYSQL_DATABASE  // використовуємо ім'я бази даних з .env
 });
+
 
 db.connect(err => {
   if (err) {
