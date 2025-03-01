@@ -1,6 +1,18 @@
 let selectedProducts = [];
+let allProducts = [];
 
-// Отримання вибраних товарів з сервера при завантаженні сторінки
+// 🟢 Завантажити каталог товарів
+function loadProducts() {
+    fetch('/products')
+        .then(response => response.json())
+        .then(data => {
+            allProducts = data;
+            renderProductTable();
+        })
+        .catch(error => console.error('Помилка завантаження товарів:', error));
+}
+
+// 🟢 Завантажити вибір товарів
 function loadSelectedProducts() {
     fetch('/selected-products')
         .then(response => response.json())
@@ -8,96 +20,81 @@ function loadSelectedProducts() {
             selectedProducts = data;
             renderSelectedProducts();
         })
-        .catch(error => console.error('Помилка завантаження вибраних товарів:', error));
+        .catch(error => console.error('Помилка завантаження вибору:', error));
 }
 
-// Відображення вибраних товарів
+// 🔴 Зберегти вибір на сервері
+function saveSelection() {
+    fetch('/selected-products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(selectedProducts)
+    }).catch(error => console.error('Помилка збереження вибору:', error));
+}
+
+// 🔄 Відобразити каталог товарів
+function renderProductTable() {
+    let list = document.getElementById('product-list'); // Оновлено id
+    list.innerHTML = '';
+    allProducts.forEach((product, index) => {
+        let row = document.createElement('tr');
+        row.innerHTML = `
+            <td><button onclick='addToSelection(${index})'>➕</button></td>
+            <td>${product.code}</td>
+            <td>${product.name}</td>
+            <td>1</td>
+            <td>${product.price.toFixed(2)}</td>
+            <td><button onclick='deleteProduct(${index})'>🗑</button></td>
+        `;
+        list.appendChild(row);
+    });
+}
+
+// ➕ Додати товар у вибір
+function addToSelection(index) {
+    let product = allProducts[index];
+    let existing = selectedProducts.find(p => p.code === product.code);
+    
+    if (existing) {
+        existing.quantity += 1;
+    } else {
+        selectedProducts.push({ ...product, quantity: 1 });
+    }
+
+    saveSelection();
+    renderSelectedProducts();
+}
+
+// 🔄 Відобразити вибрані товари
 function renderSelectedProducts() {
-    let list = document.getElementById('product-list');
+    let list = document.getElementById('selected-list');
     list.innerHTML = '';
     selectedProducts.forEach((product, index) => {
         let row = document.createElement('tr');
         row.innerHTML = `
-            <td><input type='checkbox' class='select-product' data-index='${index}' checked></td>
             <td>${product.code}</td>
             <td>${product.name}</td>
-            <td><input type='number' class='product-qty' value='${product.quantity}' min='1' onchange='updateProductQuantity(${index}, this.value)'></td>
+            <td><input type='number' value='${product.quantity}' min='1' onchange='updateProductQuantity(${index}, this.value)'></td>
             <td>${product.price.toFixed(2)}</td>
             <td>
-                <button onclick='editProduct(${index})'>Редагувати</button>
-                <button onclick='deleteProduct(${index})'>Видалити</button>
+                <button onclick='deleteProduct(${index})'>🗑 Видалити</button>
             </td>
         `;
         list.appendChild(row);
     });
 }
 
-// Додавання товару до вибору
-function addProduct() {
-    let code = prompt('Введіть код товару:');
-    let name = prompt('Введіть назву товару:');
-    let price = parseFloat(prompt('Введіть ціну товару:'));
-    let quantity = parseInt(prompt('Введіть кількість товару:'));
-
-    if (code && name && !isNaN(price) && !isNaN(quantity)) {
-        // Відправка на сервер для збереження
-        fetch('/selected-products', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code, name, price, quantity })
-        })
-        .then(response => response.json())
-        .then(data => {
-            selectedProducts.push(data);
-            renderSelectedProducts();
-        })
-        .catch(error => console.error('Помилка додавання товару:', error));
-    } else {
-        alert('Некоректні дані!');
-    }
-}
-
-// Оновлення кількості вибраного товару
-function updateProductQuantity(index, quantity) {
-    let product = selectedProducts[index];
-    product.quantity = parseInt(quantity);
-    
-    // Оновлення на сервері
-    fetch(`/selected-products/${product.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quantity: product.quantity })
-    })
-    .catch(error => console.error('Помилка оновлення кількості товару:', error));
-}
-
-// Видалення вибраного товару
+// 🗑 Видалити товар
 function deleteProduct(index) {
-    let product = selectedProducts[index];
-    fetch(`/selected-products/${product.id}`, {
-        method: 'DELETE'
-    })
-    .then(() => {
-        selectedProducts.splice(index, 1);
-        renderSelectedProducts();
-    })
-    .catch(error => console.error('Помилка видалення товару:', error));
+    selectedProducts.splice(index, 1);
+    saveSelection();
+    renderSelectedProducts();
 }
 
-// Генерація замовлення
-function generateOrder() {
-    let orderText = '';
-    let totalAmount = 0;
-
-    selectedProducts.forEach(product => {
-        let sum = product.quantity * product.price;
-        totalAmount += sum;
-        orderText += `${product.code} - ${product.name} - ${product.quantity} шт \n`;
-    });
-
-    orderText += `\nЗагальна сума: ${totalAmount.toFixed(2)} грн`;
-    document.getElementById('order-text').value = orderText;
-}
-
-// Обробка події на завантаження сторінки
-window.onload = loadSelectedProducts;
+// 📦 Завантажити дані при старті
+window.onload = function () {
+    console.log('🚀 Завантаження сторінки...');
+    loadProducts();
+    loadSelectedProducts();
+    setInterval(loadSelectedProducts, 5000);
+};
