@@ -62,23 +62,24 @@ function renderProductTable() {
     allProducts.sort((a, b) => a.name.localeCompare(b.name));
 
     allProducts.forEach((product, index) => {
-        let price = parseFloat(product.price);
-        if (isNaN(price)) price = 0;
-
-        let isSelected = selectedProducts.some(p => p.code === product.code);
-
+        let selectedProduct = selectedProducts.find(p => p.code === product.code);
+        let quantity = selectedProduct ? selectedProduct.quantity : 1;
+    
         let row = document.createElement('tr');
         row.innerHTML = `
             <td>
                 <button onclick='toggleSelection(${index})' 
-                    style="background-color: ${isSelected ? 'green' : 'white'};">
-                    ${isSelected ? '✔' : '➕'}
+                    style="background-color: ${selectedProduct ? 'green' : 'white'};">
+                    ${selectedProduct ? '✔' : '➕'}
                 </button>
             </td>
             <td>${product.code}</td>
             <td>${product.name}</td>
-            <td><input type="number" value="1" min="1" id="qty-${index}"></td>
-            <td>${price.toFixed(2)}</td>
+            <td>
+                <input type="number" value="${quantity}" min="1" 
+                    id="qty-${index}" onchange="updateQuantity(${index})">
+            </td>
+            <td>${parseFloat(product.price).toFixed(2)}</td>
             <td>
                 <button onclick='editProduct(${index})'>✏</button>
                 <button onclick='deleteProduct(${index})'>🗑</button>
@@ -86,6 +87,7 @@ function renderProductTable() {
         `;
         list.appendChild(row);
     });
+    
 }
 
 // ➕ Додати або прибрати товар зі списку вибраних
@@ -99,18 +101,43 @@ function toggleSelection(index) {
         return;
     }
 
-    let existingIndex = selectedProducts.findIndex(p => p.code === product.code);
-    if (existingIndex !== -1) {
-        selectedProducts.splice(existingIndex, 1); // Якщо товар вже вибраний – видаляємо
-    } else {
-        selectedProducts.push({ code: product.code, name: product.name, quantity, price: product.price });
-    }
+    let existingProductIndex = selectedProducts.findIndex(p => p.code === product.code);
 
-    console.log("✅ Поточний вибір товарів:", selectedProducts);
+    if (existingProductIndex !== -1) {
+        // Якщо товар вже вибраний, зняти вибір (видалити)
+        selectedProducts.splice(existingProductIndex, 1);
+    } else {
+        // Якщо товар не вибраний — додати його
+        selectedProducts.push({
+            code: product.code,
+            name: product.name,
+            quantity: quantity,
+            price: product.price
+        });
+    }
 
     saveSelection();
     renderProductTable();
     renderOrderText();
+}
+
+function updateQuantity(index) {
+    let product = allProducts[index];
+    let quantityInput = document.getElementById(`qty-${index}`);
+    let quantity = parseInt(quantityInput.value);
+
+    if (isNaN(quantity) || quantity < 1) {
+        alert("Кількість повинна бути більше 0");
+        quantityInput.value = 1; // Встановлюємо мінімум 1
+        return;
+    }
+
+    let selectedProduct = selectedProducts.find(p => p.code === product.code);
+    if (selectedProduct) {
+        selectedProduct.quantity = quantity;
+        saveSelection();
+        renderOrderText();
+    }
 }
 
 
