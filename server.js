@@ -151,30 +151,42 @@ app.delete('/delete-product/:brand/:code', (req, res) => {
 
 // 🟢 Отримати вибір товарів
 app.get('/selected-products', (req, res) => {
-  db.query('SELECT selection_data FROM global_selection WHERE id = 1', (err, results) => {
-    if (err) return res.status(500).json({ error: 'Помилка сервера' });
-    res.json(results.length > 0 ? JSON.parse(results[0].selection_data) : []);
+  db.query(`SELECT selection_data FROM global_selection WHERE id = 1`, (err, results) => {
+      if (err) {
+          console.error('❌ Помилка отримання вибору:', err);
+          res.status(500).send('Помилка сервера');
+      } else {
+          if (results.length > 0) {
+              res.json(JSON.parse(results[0].selection_data));
+          } else {
+              res.json({ eleys: [], grunhelm: [] });
+          }
+      }
   });
 });
+
 
 // 🔴 Оновити вибір товарів
+
 app.post('/selected-products', (req, res) => {
-  const selectionData = req.body.map(item => {
-    if (item.quantity <= 0) {
-      item.quantity = 0;  // Автоматичне встановлення 0, якщо кількість менше або дорівнює 0
-    }
-    return item;
-  });
+  const selectionData = JSON.stringify(req.body);
 
   db.query(
-    'REPLACE INTO global_selection (id, selection_data) VALUES (1, ?)',
-    [JSON.stringify(selectionData)],
-    (err) => {
-      if (err) return res.status(500).json({ error: 'Помилка сервера' });
-      res.json({ message: '✅ Вибір оновлено' });
-    }
+      `INSERT INTO global_selection (id, selection_data) 
+       VALUES (1, ?) 
+       ON DUPLICATE KEY UPDATE selection_data = VALUES(selection_data)`, 
+      [selectionData], 
+      (err) => {
+          if (err) {
+              console.error('❌ Помилка збереження вибору:', err);
+              res.status(500).send('Помилка сервера');
+          } else {
+              res.send({ message: '✅ Вибір збережено' });
+          }
+      }
   );
 });
+
 
 app.get('/products', (req, res) => {
   console.log('🔵 Запит на отримання товарів');

@@ -279,37 +279,30 @@ function updateQuantity(brand, index) {
     })
     .catch(error => console.error('Помилка оновлення кількості товару:', error));
 }
-function toggleOrderText(brand) {
-    let orderText = document.getElementById(`order-text-${brand}`);
-    let clearButton = document.querySelector(`#clear-selection-${brand}`);
-    let orderButton = document.querySelector(`#order-button-${brand}`); // Кнопка для показу замовлення
 
-    if (selectedProducts[brand].length > 0) {
-        orderButton.style.display = 'inline-block'; // Показуємо кнопку "Показати замовлення"
-    } else {
-        orderButton.style.display = 'none'; // Ховаємо кнопку, якщо товарів немає
-    }
-
-    if (orderText.style.display === 'none') {
-        orderText.style.display = 'block';  // Показати текст замовлення
-        clearButton.classList.add('clear-visible');  // Показати кнопку очистки
-    } else {
-        orderText.style.display = 'none';  // Приховати текст замовлення
-        clearButton.classList.remove('clear-visible');  // Сховати кнопку очистки
-    }
+function loadSelection() {
+    fetch('/selected-products')
+        .then(response => response.json())
+        .then(data => {
+            selectedProducts = data;
+            renderProductTable('eleys');
+            renderProductTable('grunhelm');
+            renderOrderText('eleys');
+            renderOrderText('grunhelm');
+        })
+        .catch(error => console.error('❌ Помилка завантаження вибору:', error));
 }
 
 
-// 📦 Завантажити дані при старті
+
 window.onload = function () {
     showTab('eleys');
     loadProducts('eleys');
     loadProducts('grunhelm');
     loadCategories('eleys');
     loadCategories('grunhelm');
-    // Оновлюємо кнопки при старті
-    toggleOrderText('eleys');
-    toggleOrderText('grunhelm');
+    loadSelection(); // Завантаження вибору з сервера
 };
+
 
 
