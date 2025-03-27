@@ -1,74 +1,34 @@
-let selectedProducts = [];
-let allProducts = [];
+let selectedProducts = {
+    eleys: [],
+    grunhelm: []
+};
 
-// ➕ Додати новий товар
-function addNewProduct() {
-    let code = document.getElementById('new-code').value.trim();
-    let name = document.getElementById('new-name').value.trim();
-    let price = parseFloat(document.getElementById('new-price').value);
+let allProducts = {
+    eleys: [],
+    grunhelm: []
+};
 
-    if (!code || !name || isNaN(price) || price <= 0) {
-        alert("Всі поля повинні бути заповнені правильно!");
-        return;
-    }
+// 🔄 Відобразити каталог товарів для конкретного бренду
+function renderProductTable(brand) {
+    let list = document.getElementById(`products_${brand}`);
 
-    fetch('/add-product', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, name, price })
-    })
-    .then(response => response.json())
-    .then(data => {
-        alert(data.message);
-        loadProducts(); 
-    })
-    .catch(error => console.error('Помилка додавання товару:', error));
-}
+    list.innerHTML = '';
 
-// 🟢 Завантажити каталог товарів
-function loadProducts() {
-    fetch('/products')
-        .then(response => response.json())
-        .then(data => {
-            allProducts = data;
-            renderProductTable();
-        })
-        .catch(error => console.error('Помилка завантаження товарів:', error));
-}
-
-// 🟢 Завантажити вибрані товари
-function loadSelectedProducts() {
-    fetch('/selected-products')
-        .then(response => response.json())
-        .then(data => {
-            selectedProducts = data;
-            renderProductTable(); 
-            renderOrderText();
-        })
-        .catch(error => console.error('Помилка завантаження вибору:', error));
-}
-
-// 🔄 Відобразити каталог товарів
-function renderProductTable() {
-    let list = document.getElementById('product');
-    if (!list) return console.error("❌ Елемент #product не знайдено!");
-
-    list.innerHTML = '';  
-
-    if (allProducts.length === 0) {
+    if (allProducts[brand].length === 0) {
         list.innerHTML = '<tr><td colspan="7">❌ Товари відсутні</td></tr>';
         return;
     }
-    allProducts.sort((a, b) => a.name.localeCompare(b.name));
 
-    allProducts.forEach((product, index) => {
-        let selectedProduct = selectedProducts.find(p => p.code === product.code);
+    allProducts[brand].sort((a, b) => a.name.localeCompare(b.name));
+
+    allProducts[brand].forEach((product, index) => {
+        let selectedProduct = selectedProducts[brand].find(p => p.code === product.code);
         let quantity = selectedProduct ? selectedProduct.quantity : 1;
-    
+
         let row = document.createElement('tr');
         row.innerHTML = `
             <td>
-                <button onclick='toggleSelection(${index})' 
+                <button onclick='toggleSelection("${brand}", ${index})' 
                     style="background-color: ${selectedProduct ? 'green' : 'white'};">
                     ${selectedProduct ? '✔' : '➕'}
                 </button>
@@ -77,38 +37,41 @@ function renderProductTable() {
             <td>${product.name}</td>
             <td>
                 <input type="number" value="${quantity}" min="1" 
-                    id="qty-${index}" onchange="updateQuantity(${index})">
+                    id="qty-${brand}-${index}" onchange="updateQuantity('${brand}', ${index})">
             </td>
             <td>${parseFloat(product.price).toFixed(2)}</td>
             <td>
-                <button onclick='editProduct(${index})'>✏</button>
-                <button onclick='deleteProduct(${index})'>🗑</button>
+                <button onclick='editProduct("${brand}", ${index})'>✏</button>
+                <button onclick='deleteProduct("${brand}", ${index})'>🗑</button>
             </td>
         `;
         list.appendChild(row);
     });
-    
+}
+
+// 🟢 Перемикання вкладок між брендами
+function showTab(brand) {
+    document.querySelectorAll('.tab').forEach(tab => tab.style.display = 'none');
+    document.getElementById(brand).style.display = 'block';
 }
 
 // ➕ Додати або прибрати товар зі списку вибраних
-function toggleSelection(index) {
-    let product = allProducts[index];
-    let quantityInput = document.getElementById(`qty-${index}`);
+function toggleSelection(brand, index) {
+    let product = allProducts[brand][index];
+    let quantityInput = document.getElementById(`qty-${brand}-${index}`);
     let quantity = parseInt(quantityInput.value);
 
+    // Якщо кількість не задана або менше 1, встановлюємо значення 0
     if (isNaN(quantity) || quantity < 1) {
-        alert("Кількість повинна бути більше 0");
-        return;
+        quantity = 0;
     }
 
-    let existingProductIndex = selectedProducts.findIndex(p => p.code === product.code);
+    let existingProductIndex = selectedProducts[brand].findIndex(p => p.code === product.code);
 
     if (existingProductIndex !== -1) {
-        // Якщо товар вже вибраний, зняти вибір (видалити)
-        selectedProducts.splice(existingProductIndex, 1);
+        selectedProducts[brand].splice(existingProductIndex, 1);
     } else {
-        // Якщо товар не вибраний — додати його
-        selectedProducts.push({
+        selectedProducts[brand].push({
             code: product.code,
             name: product.name,
             quantity: quantity,
@@ -116,132 +79,237 @@ function toggleSelection(index) {
         });
     }
 
-    saveSelection();
-    renderProductTable();
-    renderOrderText();
-}
-
-function updateQuantity(index) {
-    let product = allProducts[index];
-    let quantityInput = document.getElementById(`qty-${index}`);
-    let quantity = parseInt(quantityInput.value);
-
-    if (isNaN(quantity) || quantity < 1) {
-        alert("Кількість повинна бути більше 0");
-        quantityInput.value = 1; // Встановлюємо мінімум 1
-        return;
-    }
-
-    let selectedProduct = selectedProducts.find(p => p.code === product.code);
-    if (selectedProduct) {
-        selectedProduct.quantity = quantity;
-        saveSelection();
-        renderOrderText();
-    }
+    // Оновлюємо дані на сервері
+    fetch(`/selected-products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(selectedProducts)
+    })
+    .then(() => {
+        renderProductTable(brand);
+        renderOrderText(brand);
+    })
+    .catch(error => console.error('Помилка вибору товару:', error));
 }
 
 
 // 🔄 Оновити текст замовлення
-function renderOrderText() {
-    let orderText = document.getElementById('order-text');
+function renderOrderText(brand) {
+    let orderText = document.getElementById(`order-text-${brand}`);
     if (!orderText) {
-        console.error("❌ Поле для замовлення не знайдено!");
+        console.error(`❌ Поле для замовлення #order-text-${brand} не знайдено!`);
         return;
     }
 
-    if (selectedProducts.length === 0) {
+    if (selectedProducts[brand].length === 0) {
         orderText.value = "❌ Немає вибраних товарів!";
         return;
     }
 
     let total = 0;
-    let orderDetails = selectedProducts.map(p => {
+    let orderDetails = selectedProducts[brand].map(p => {
         let itemTotal = p.quantity * p.price;
         total += itemTotal;
-        return `${p.code} - ${p.name} -  ${p.quantity} шт`;
+        return `${p.code} - ${p.name} - ${p.quantity} шт`;
     }).join('\n');
 
     orderText.value = `${orderDetails}\n\n🟢 Загальна сума: ${total.toFixed(2)} грн`;
-    console.log("📦 Замовлення оновлено:\n", orderText.value);
 }
 
+// 🔴 Очистити вибір для конкретного бренду
+function clearSelection(brand) {
+    selectedProducts[brand] = [];
 
-
-// ✏ Редагувати товар (змінюється код, назва, ціна)
-function editProduct(index) {
-    let product = allProducts[index];
-
-    let newCode = prompt("🔢 Введіть новий код:", product.code).trim();
-    let newName = prompt("✏ Введіть нову назву:", product.name).trim();
-    let newPrice = parseFloat(prompt("💰 Введіть нову ціну:", product.price));
-
-    if (!newCode || !newName || isNaN(newPrice) || newPrice <= 0) {
-        alert("❌ Дані введено некоректно!");
-        return;
-    }
-
-    fetch(`/edit-product`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ oldCode: product.code, newCode, name: newName, price: newPrice })
-    })
-    .then(response => response.json())
-    .then(data => {
-        alert(data.message);
-        loadProducts();
-    })
-    .catch(error => console.error('Помилка редагування товару:', error));
-}
-
-// 🗑 Видалити товар з бази
-function deleteProduct(index) {
-    let product = allProducts[index];
-
-    if (!confirm(`❗ Ви впевнені, що хочете видалити "${product.name}"?`)) return;
-
-    fetch(`/delete-product/${product.code}`, { method: 'DELETE' })
-        .then(response => response.json())
-        .then(data => {
-            alert(data.message);
-            loadProducts();
-        })
-        .catch(error => console.error('Помилка видалення товару:', error));
-}
-
-// 🔴 Зберегти вибір на сервері
-function saveSelection() {
-    fetch('/selected-products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(selectedProducts)
-    })
-    .then(() => console.log("✅ Вибір товарів збережено на сервері!"))
-    .catch(error => console.error('❌ Помилка збереження вибору:', error));
-}
-
-
-
-// 🔴 Очистити вибір
-function clearSelection() {
-    selectedProducts = [];
-
-    fetch('/selected-products', {
+    // Оновлюємо дані на сервері
+    fetch(`/selected-products/${brand}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify([])
     })
     .then(() => {
-        renderProductTable();
-        renderOrderText();
-        
+        renderProductTable(brand);  // Перемалювати таблицю товарів
+        renderOrderText(brand);     // Оновити текст замовлення
     })
     .catch(error => console.error('Помилка очищення вибору:', error));
 }
 
-  
+
+function loadProducts(brand) {
+    fetch(`/products/${brand}`)
+        .then(response => response.json())
+        .then(data => {
+            console.log(`📥 Отримані товари для ${brand}:`, data); // Додаємо лог
+            allProducts[brand] = data;
+            renderProductTable(brand);
+        })
+        .catch(error => console.error(`❌ Помилка завантаження товарів ${brand}:`, error));
+}
+
+
+
+function addNewProduct(brand) {
+    let code = document.getElementById(`new-code-${brand}`).value;
+    let name = document.getElementById(`new-name-${brand}`).value;
+    let price = document.getElementById(`new-price-${brand}`).value;
+    let category = document.getElementById(`new-category-${brand}`).value;
+
+    if (!category) {
+        category = prompt("Введіть нову категорію:");
+        if (!category) return;
+    }
+
+    fetch(`/add-product/${brand}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, name, price, category })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+        loadProducts(brand);
+        loadCategories(brand); // Оновлення категорій
+    })
+    .catch(error => console.error("❌ Помилка додавання товару:", error));
+}
+
+
+
+function editProduct(brand, index) {
+    let product = allProducts[brand][index];
+    let newCode = prompt("Новий код товару:", product.code);
+    let newName = prompt("Нова назва товару:", product.name);
+    let newPrice = prompt("Нова ціна товару:", product.price);
+    let newCategory = prompt("Нова категорія товару:", product.category); // Додавання категорії
+
+    fetch(`/edit-product/${brand}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            oldCode: product.code,
+            newCode: newCode,
+            name: newName,
+            price: newPrice,
+            category: newCategory
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+        loadProducts(brand); // Після редагування завантажуємо всі товари знову
+    })
+    .catch(error => console.error("❌ Помилка редагування товару:", error));
+}
+
+
+function deleteProduct(brand, index) {
+    let product = allProducts[brand][index];
+
+    if (!confirm(`Ви впевнені, що хочете видалити ${product.name}?`)) return;
+
+    fetch(`/delete-product/${brand}/${product.code}`, {
+        method: "DELETE"
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+        loadProducts(brand);
+    })
+    .catch(error => console.error("❌ Помилка видалення товару:", error));
+}
+function filterCategory(brand) {
+    let category = document.getElementById(`category-select-${brand}`).value;
+
+    if (category === "all") {
+        // Якщо вибрано "Всі", відображаємо всі товари, не фільтруючи за категорією.
+        loadProducts(brand);
+    } else {
+        // Інакше фільтруємо за вибраною категорією.
+        fetch(`/products/${brand}?category=${category}`)
+            .then(response => response.json())
+            .then(data => {
+                allProducts[brand] = data;
+                renderProductTable(brand);
+            })
+            .catch(error => console.error(`❌ Помилка фільтрації товарів ${brand}:`, error));
+    }
+}
+
+function loadCategories(brand) {
+    fetch(`/categories/${brand}`)
+        .then(response => response.json())
+        .then(categories => {
+            let categorySelect = document.getElementById(`category-select-${brand}`);
+            let newCategorySelect = document.getElementById(`new-category-${brand}`);
+
+            categorySelect.innerHTML = `<option value="all">Всі</option>`;
+            newCategorySelect.innerHTML = `<option value="">-- Виберіть категорію --</option>`;
+
+            categories.forEach(category => {
+                let option = `<option value="${category}">${category}</option>`;
+                categorySelect.innerHTML += option;
+                newCategorySelect.innerHTML += option;
+            });
+        })
+        .catch(error => console.error(`❌ Помилка завантаження категорій ${brand}:`, error));
+}
+function updateQuantity(brand, index) {
+    let quantityInput = document.getElementById(`qty-${brand}-${index}`);
+    let quantity = parseInt(quantityInput.value);
+
+    // Якщо кількість не задана або менше 1, встановлюємо значення 0
+    if (isNaN(quantity) || quantity < 1) {
+        quantity = 0;
+    }
+
+    let product = allProducts[brand][index];
+    let existingProductIndex = selectedProducts[brand].findIndex(p => p.code === product.code);
+
+    if (existingProductIndex !== -1) {
+        selectedProducts[brand][existingProductIndex].quantity = quantity;
+    }
+
+    fetch(`/selected-products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(selectedProducts)
+    })
+    .then(() => {
+        renderProductTable(brand);
+        renderOrderText(brand);
+    })
+    .catch(error => console.error('Помилка оновлення кількості товару:', error));
+}
+function toggleOrderText(brand) {
+    let orderText = document.getElementById(`order-text-${brand}`);
+    let clearButton = document.querySelector(`#clear-selection-${brand}`);
+    let orderButton = document.querySelector(`#order-button-${brand}`); // Кнопка для показу замовлення
+
+    if (selectedProducts[brand].length > 0) {
+        orderButton.style.display = 'inline-block'; // Показуємо кнопку "Показати замовлення"
+    } else {
+        orderButton.style.display = 'none'; // Ховаємо кнопку, якщо товарів немає
+    }
+
+    if (orderText.style.display === 'none') {
+        orderText.style.display = 'block';  // Показати текст замовлення
+        clearButton.classList.add('clear-visible');  // Показати кнопку очистки
+    } else {
+        orderText.style.display = 'none';  // Приховати текст замовлення
+        clearButton.classList.remove('clear-visible');  // Сховати кнопку очистки
+    }
+}
+
+
 // 📦 Завантажити дані при старті
 window.onload = function () {
-    loadProducts();
-    loadSelectedProducts();
-    setInterval(loadSelectedProducts, 5000);
+    showTab('eleys');
+    loadProducts('eleys');
+    loadProducts('grunhelm');
+    loadCategories('eleys');
+    loadCategories('grunhelm');
+    // Оновлюємо кнопки при старті
+    toggleOrderText('eleys');
+    toggleOrderText('grunhelm');
 };
+
+

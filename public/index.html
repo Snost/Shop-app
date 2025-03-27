@@ -7,32 +7,94 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h2>ELEYS СПИСОК ТОВАРІВ</h2>
+    <div class="tabs">
+        <button onclick="showTab('eleys')">ELEYS</button>
+        <button onclick="showTab('grunhelm')">Grunhelm</button>
+    </div>
 
-    <h2>Додати товар</h2>
-    <input type="text" id="new-code" placeholder="Код товару">
-    <input type="text" id="new-name" placeholder="Назва товару">
-    <input type="number" id="new-price" placeholder="Ціна" min="0.01">
-    <button onclick="addNewProduct()">Додати товар</button>
+    <div id="eleys" class="tab">
 
-    <table>
-        <thead>
-            <tr>
-                <th>Вибрати</th>
-                <th>Код товару</th>
-                <th>Назва товару</th>
-                <th>Кількість</th>
-                <th>Ціна за одиницю</th>
-                <th>Дії</th>
-            </tr>
-        </thead>
-        <tbody id="product"></tbody>
-    </table>
+        <h2>ELEYS СПИСОК ТОВАРІВ</h2>
+        
+        <textarea id="order-text-eleys" rows="5" cols="50" readonly ></textarea>
+        <button id="clear-selection-eleys" onclick="clearSelection('eleys')" >Очистити вибір</button>
+        
 
-    <button onclick="clearSelection()">Очистити вибір</button>
+        <div class="filter-container">
+            <h4>Фільтр:</h4>
+            <select id="category-select-eleys" onchange="filterCategory('eleys')">
+                <option value="all">Всі</option>
+            </select>
+        </div>
+        
+        <div class="input-group">
+            <input type="text" id="new-code" placeholder="Код товару">
+            <input type="text" id="new-name" placeholder="Назва товару">
+            <input type="number" id="new-price" placeholder="Ціна" min="0.01">
+            <select id="new-category-eleys">
+                <option value="category1">Категорія 1</option>
+                <option value="category2">Категорія 2</option>
+            </select>
+            <button onclick="addNewProduct('eleys')">Додати товар</button>
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Вибрати</th>
+                    <th>Код товару</th>
+                    <th>Назва товару</th>
+                    <th>Кількість</th>
+                    <th>Ціна за одиницю</th>
+                    <th>Дії</th>
+                </tr>
+            </thead>
+            <tbody id="products_eleys"></tbody>
+        </table>
+        
+    </div>
 
-    <h3>Замовлення:</h3>
-    <textarea id="order-text" rows="10" cols="50" readonly></textarea>
+    <div id="grunhelm" class="tab" style="display:none;">
+
+        <h2>GRUNHELM СПИСОК ТОВАРІВ</h2>
+       
+        <textarea id="order-text-grunhelm" rows="5" cols="50" readonly ></textarea>
+        <button id="clear-selection-grunhelm" onclick="clearSelection('grunhelm')" >Очистити вибір</button>
+
+        <div class="filter-container">
+            <h4>Фільтр:</h4>
+            <select id="category-select-grunhelm" onchange="filterCategory('grunhelm')">
+                <option value="all">Всі</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <input type="text" id="new-code-grunhelm" placeholder="Код товару">
+            <input type="text" id="new-name-grunhelm" placeholder="Назва товару">
+            <input type="number" id="new-price-grunhelm" placeholder="Ціна" min="0.01">
+            <select id="new-category-grunhelm">
+                <option value="category1">Категорія 1</option>
+                <option value="category2">Категорія 2</option>
+            </select>
+            <button onclick="addNewProduct('grunhelm')">Додати товар</button>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Вибрати</th>
+                    <th>Код товару</th>
+                    <th>Назва товару</th>
+                    <th>Кількість</th>
+                    <th>Ціна за одиницю</th>
+                    <th>Дії</th>
+                </tr>
+            </thead>
+            <tbody id="products_grunhelm"></tbody>
+        </table>
+        
+    </div>
+    
 
     <script src="script.js"></script>
 </body>

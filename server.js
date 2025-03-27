@@ -20,9 +20,11 @@ db.connect(err => {
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+
+
 // 🟢 Створення таблиці products
 db.query(`
-  CREATE TABLE IF NOT EXISTS products (
+  CREATE TABLE IF NOT EXISTS products_grunhelm (
     id INT AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(50) UNIQUE,
     name VARCHAR(255),
@@ -30,7 +32,7 @@ db.query(`
   )
 `, (err) => {
   if (err) console.error('❌ Помилка створення таблиці products:', err);
-  else console.log('✅ Таблиця products створена або вже існує');
+  else console.log('✅ Таблиця products_grunhelm створена або вже існує');
 });
 
 // 🟢 Створення таблиці global_selection
@@ -56,75 +58,93 @@ db.query(`
 
 
 
-// 🟢 Отримати список усіх товарів
-app.get('/products', (req, res) => {
-  console.log('Запит до /products');
-  db.query('SELECT * FROM products', (err, results) => {
-    if (err) {
-      console.error('Помилка:', err);
-      return res.status(500).json({ error: 'Помилка сервера' });
-    }
-    console.log('Товари:', results);
-    res.json(results);
-  });
-});
+
 
 // 🟢 Додати товар у каталог (✅ повернуто!)
-app.post('/add-product', (req, res) => {
-  const { code, name, price } = req.body;
-  if (!code || !name || !price) {
+app.post('/add-product/:brand', (req, res) => {
+  const brand = req.params.brand;
+  const { code, name, price, category } = req.body;
+  const tableName = `products_${brand}`;
+
+  if (!code || !name || !price || !category) {
     return res.status(400).json({ error: 'Не всі дані заповнені' });
   }
 
   db.query(
-    'INSERT INTO products (code, name, price) VALUES (?, ?, ?)',
-    [code, name, price],
+    `INSERT INTO ${tableName} (code, name, price, category) VALUES (?, ?, ?, ?)`,
+    [code, name, price, category],
     (err) => {
       if (err) {
-        console.error('❌ Помилка додавання товару:', err);
+        console.error(`❌ Помилка додавання товару:`, err);
         return res.status(500).json({ error: 'Помилка сервера' });
       }
-      console.log('✅ Товар додано:', name);
+
+      // Додаємо категорію, якщо її ще немає
+      db.query(
+        `INSERT INTO categories (brand, name) VALUES (?, ?) ON DUPLICATE KEY UPDATE name = name`,
+        [brand, category],
+        (err) => {
+          if (err) console.error('❌ Помилка додавання категорії:', err);
+        }
+      );
+
       res.json({ message: '✅ Товар успішно додано' });
     }
   );
 });
-// 📝 Редагувати товар
-app.put('/edit-product', (req, res) => {
-  const { oldCode, newCode, name, price } = req.body;
-
-  if (!oldCode || !newCode || !name || !price) {
-      return res.status(400).json({ error: 'Не всі дані заповнені' });
-  }
+app.get('/categories/:brand', (req, res) => {
+  const brand = req.params.brand;
 
   db.query(
-      'UPDATE products SET code = ?, name = ?, price = ? WHERE code = ?',
-      [newCode, name, price, oldCode],
-      (err, result) => {
-          if (err) {
-              console.error('❌ Помилка редагування товару:', err);
-              return res.status(500).json({ error: 'Помилка сервера' });
-          }
-          if (result.affectedRows === 0) {
-              return res.status(404).json({ error: '❌ Товар не знайдено' });
-          }
-          res.json({ message: '✅ Товар оновлено' });
+    `SELECT DISTINCT category FROM products_${brand}`,
+    (err, results) => {
+      if (err) {
+        console.error('❌ Помилка отримання категорій:', err);
+        return res.status(500).json({ error: 'Помилка сервера' });
       }
+      const categories = results.map(row => row.category);
+      res.json(categories);
+    }
   );
 });
-// 🗑 Видалити товар
-app.delete('/delete-product/:code', (req, res) => {
-  const { code } = req.params;
 
-  db.query('DELETE FROM products WHERE code = ?', [code], (err, result) => {
+// 📝 Редагувати товар
+app.put('/edit-product/:brand', (req, res) => {
+  const brand = req.params.brand;
+  const { oldCode, newCode, name, price, category } = req.body;
+  const tableName = `products_${brand}`;
+
+  db.query(
+    `UPDATE ${tableName} SET code = ?, name = ?, price = ?, category = ? WHERE code = ?`,
+    [newCode, name, price, category, oldCode],
+    (err, result) => {
       if (err) {
-          console.error('❌ Помилка видалення товару:', err);
-          return res.status(500).json({ error: 'Помилка сервера' });
+        console.error(`❌ Помилка редагування товару:`, err);
+        return res.status(500).json({ error: 'Помилка сервера' });
       }
       if (result.affectedRows === 0) {
-          return res.status(404).json({ error: '❌ Товар не знайдено' });
+        return res.status(404).json({ error: '❌ Товар не знайдено' });
       }
-      res.json({ message: '✅ Товар видалено' });
+      res.json({ message: '✅ Товар оновлено' });
+    }
+  );
+});
+
+
+// 🗑 Видалити товар
+app.delete('/delete-product/:brand/:code', (req, res) => {
+  const { brand, code } = req.params;
+  const tableName = `products_${brand}`;
+
+  db.query(`DELETE FROM ${tableName} WHERE code = ?`, [code], (err, result) => {
+    if (err) {
+      console.error(`❌ Помилка видалення товару з ${tableName}:`, err);
+      return res.status(500).json({ error: 'Помилка сервера' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: '❌ Товар не знайдено' });
+    }
+    res.json({ message: '✅ Товар видалено' });
   });
 });
 
@@ -139,27 +159,72 @@ app.get('/selected-products', (req, res) => {
 
 // 🔴 Оновити вибір товарів
 app.post('/selected-products', (req, res) => {
-  const selectionData = JSON.stringify(req.body);
+  const selectionData = req.body.map(item => {
+    if (item.quantity <= 0) {
+      item.quantity = 0;  // Автоматичне встановлення 0, якщо кількість менше або дорівнює 0
+    }
+    return item;
+  });
+
   db.query(
     'REPLACE INTO global_selection (id, selection_data) VALUES (1, ?)',
-    [selectionData],
+    [JSON.stringify(selectionData)],
     (err) => {
       if (err) return res.status(500).json({ error: 'Помилка сервера' });
       res.json({ message: '✅ Вибір оновлено' });
     }
   );
 });
+
 app.get('/products', (req, res) => {
   console.log('🔵 Запит на отримання товарів');
-  db.query('SELECT * FROM products', (err, results) => {
+ db.query('SELECT * FROM products', (err, results) => {
       if (err) {
-          console.error('❌ Помилка отримання товарів:', err);
-          return res.status(500).json({ error: 'Помилка сервера' });
-      }
+         console.error('❌ Помилка отримання товарів:', err);
+         return res.status(500).json({ error: 'Помилка сервера' });
+     }
       console.log('✅ Отримано товари:', results);
       res.json(results);
   });
 });
+
+
+app.get('/products/:brand', (req, res) => {
+  const brand = req.params.brand;
+  const category = req.query.category;
+  const tableName = `products_${brand}`;
+
+  let query = `SELECT * FROM ${tableName}`;
+  let params = [];
+
+  if (category && category !== "all") {
+    query += " WHERE category = ?";
+    params.push(category);
+  }
+
+  db.query(query, params, (err, results) => {
+    if (err) {
+      console.error('❌ Помилка отримання товарів:', err);
+      return res.status(500).json({ error: 'Помилка сервера' });
+    }
+    res.json(results);
+  });
+});
+
+
+
+
+
+function showTab(tabId) {
+  // Отримуємо всі вкладки
+  const tabs = document.querySelectorAll('.tab');
+  
+  // Ховаємо всі вкладки
+  tabs.forEach(tab => tab.style.display = 'none');
+
+  // Показуємо вибрану вкладку
+  document.getElementById(tabId).style.display = 'block';
+}
 
 // Запуск сервера
 app.listen(port, () => {
